@@ -1,0 +1,2 @@
+ALTER TABLE "leads" ADD COLUMN "rawPhone" TEXT;
+ALTER TABLE "leads" ADD COLUMN "reviewIssues" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];

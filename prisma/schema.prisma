@@ -1,0 +1,207 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+model User {
+  id String @id @default(cuid())
+  name String
+  email String @unique
+  passwordHash String
+  role String @default("FREELANCER")
+  active Boolean @default(true)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  sessions Session[]
+  resets PasswordReset[]
+  leads Lead[]
+  assignments LeadAssignment[]
+  interactions Interaction[]
+  tasks Task[]
+  events LeadEvent[]
+  conversions Conversion[]
+  batches ImportBatch[]
+  @@map("users")
+}
+model Session {
+  id String @id
+  userId String
+  user User @relation(fields: [userId], references: [id])
+  expiresAt DateTime @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+model PasswordReset {
+  id String @id
+  userId String
+  user User @relation(fields: [userId], references: [id])
+  expiresAt DateTime @db.Timestamptz(3)
+  usedAt DateTime? @db.Timestamptz(3)
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+model Pipeline {
+  id String @id @default("commercial")
+  name String
+  stages Stage[]
+  @@map("pipelines")
+}
+model Stage {
+  id String @id
+  name String
+  position Int
+  active Boolean @default(true)
+  kind String @default("OPEN")
+  allowedFrom String[]
+  requiresTask Boolean @default(false)
+  pipelineId String @default("commercial")
+  pipeline Pipeline @relation(fields: [pipelineId], references: [id])
+  leads Lead[]
+  @@map("stages")
+}
+model Catalog {
+  id String @id @default(cuid())
+  type String
+  name String
+  active Boolean @default(true)
+  attempt Boolean @default(false)
+  effectiveContact Boolean @default(false)
+  noResponse Boolean @default(false)
+  interactionsChannel Interaction[] @relation("channel")
+  interactionsResult Interaction[] @relation("result")
+  priorities Lead[]
+  @@unique([type, name])
+  @@map("catalogs")
+}
+model LossReason {
+  id String @id @default(cuid())
+  name String @unique
+  active Boolean @default(true)
+  leads Lead[]
+  @@map("loss_reasons")
+}
+model Lead {
+  id String @id @default(cuid())
+  name String
+  phone String?
+  rawPhone String?
+  reviewIssues String[] @default([])
+  email String?
+  source String?
+  originalId String?
+  sourceRow Int?
+  originalData Json?
+  ownerId String?
+  owner User? @relation(fields: [ownerId], references: [id])
+  stageId String @default("new")
+  stage Stage @relation(fields: [stageId], references: [id])
+  priorityId String?
+  priority Catalog? @relation(fields: [priorityId], references: [id])
+  lossReasonId String?
+  lossReason LossReason? @relation(fields: [lossReasonId], references: [id])
+  batchId String?
+  batch ImportBatch? @relation(fields: [batchId], references: [id])
+  version Int @default(0)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  assignments LeadAssignment[]
+  interactions Interaction[]
+  tasks Task[]
+  events LeadEvent[]
+  conversions Conversion[]
+  @@index([ownerId, stageId])
+  @@index([priorityId])
+  @@index([phone])
+  @@index([batchId, sourceRow])
+  @@index([createdAt])
+  @@map("leads")
+}
+model LeadAssignment {
+  id String @id @default(cuid())
+  leadId String
+  lead Lead @relation(fields: [leadId], references: [id])
+  userId String
+  user User @relation(fields: [userId], references: [id])
+  assignedAt DateTime @default(now()) @db.Timestamptz(3)
+  endedAt DateTime? @db.Timestamptz(3)
+  @@index([userId, endedAt])
+  @@map("lead_assignments")
+}
+model Interaction {
+  id String @id @default(cuid())
+  leadId String
+  lead Lead @relation(fields: [leadId], references: [id])
+  userId String
+  user User @relation(fields: [userId], references: [id])
+  channelId String
+  channel Catalog @relation("channel", fields: [channelId], references: [id])
+  resultId String
+  result Catalog @relation("result", fields: [resultId], references: [id])
+  type String
+  note String
+  attempt Boolean
+  effectiveContact Boolean
+  noResponse Boolean
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  @@index([leadId, createdAt])
+  @@index([userId, createdAt])
+  @@map("interactions")
+}
+model Task {
+  id String @id @default(cuid())
+  leadId String
+  lead Lead @relation(fields: [leadId], references: [id])
+  userId String
+  user User @relation(fields: [userId], references: [id])
+  title String
+  dueAt DateTime @db.Timestamptz(3)
+  completedAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  @@index([userId, completedAt, dueAt])
+  @@index([leadId, completedAt, dueAt])
+  @@map("tasks")
+}
+model LeadEvent {
+  id String @id @default(cuid())
+  leadId String?
+  lead Lead? @relation(fields: [leadId], references: [id])
+  userId String
+  user User @relation(fields: [userId], references: [id])
+  type String
+  data Json
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  @@index([leadId, createdAt])
+  @@map("lead_events")
+}
+model Conversion {
+  id String @id @default(cuid())
+  leadId String
+  lead Lead @relation(fields: [leadId], references: [id])
+  userId String
+  user User @relation(fields: [userId], references: [id])
+  description String
+  amount Decimal? @db.Decimal(14, 2)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  @@index([leadId, createdAt])
+  @@map("conversions")
+}
+model ImportBatch {
+  id String @id @default(cuid())
+  fileName String
+  hash String
+  mapping Json
+  report Json
+  rows Json
+  status String @default("PREVIEW")
+  distribution Json?
+  userId String
+  user User @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  confirmedAt DateTime? @db.Timestamptz(3)
+  leads Lead[]
+  @@index([hash, status])
+  @@map("import_batches")
+}
