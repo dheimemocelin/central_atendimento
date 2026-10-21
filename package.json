@@ -66,5 +66,10 @@
     "effect": "^3.20.0",
     "deepmerge-ts": "^8.0.0"
   },
-  "description": "CRM demonstrativo com Kanban, permissões e BI usando dados sintéticos."
+  "description": "CRM demonstrativo com Kanban, permissões e BI usando dados sintéticos.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dheimemocelin/central_atendimento.git"
+  }
 }
